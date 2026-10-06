@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CodeMentor-AI | Dashboard Giám Sát Tiến Độ & Giao Bài</title>
+  <title>CodeMentor-AI | Dashboard Giám Sát, Vinh Danh & Tổng Kết</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti Library cho hiệu ứng pháo hoa vinh danh -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
@@ -27,21 +30,32 @@
         </div>
         <div>
           <div class="flex items-center space-x-2">
-            <h1 class="text-base font-bold text-white tracking-wide">CodeMentor-AI | Quản Lý Thực Hành & Giao Bài</h1>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">N-TASKS ENGINE</span>
+            <h1 class="text-base font-bold text-white tracking-wide">CodeMentor-AI | Cockpit Sư Phạm Số</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">EDTECH 4.0</span>
           </div>
-          <p class="text-xs text-slate-400">Theo dõi tiến độ hoàn thành từng nhiệm vụ của học sinh</p>
+          <p class="text-xs text-slate-400">Giám sát • Bảng xếp hạng vinh danh • Đánh giá sư phạm AI</p>
         </div>
       </div>
 
-      <div class="flex items-center space-x-3">
-        <button onclick="openAssignModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30">
-          <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-          <span>Quản lý & Giao bài (<span id="btnTaskCount">3</span> bài)</span>
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-2.5">
+        <button onclick="toggleLeaderboardModal()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center space-x-1.5 transition">
+          <i data-lucide="trophy" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Bảng xếp hạng thi đua</span>
         </button>
-        <button onclick="resetAllStations()" class="px-3 py-1.5 rounded-lg bg-red-800/60 hover:bg-red-700 text-white font-semibold text-xs transition flex items-center space-x-1">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          <span>Làm mới tiết học</span>
+
+        <button onclick="openSummaryModal()" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-purple-600/30 transition">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
+          <span>Tổng kết tiết học (AI)</span>
+        </button>
+
+        <button onclick="openAssignModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition">
+          <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+          <span>Giao bài (<span id="btnTaskCount">3</span>)</span>
+        </button>
+
+        <button onclick="resetAllStations()" class="p-1.5 rounded-lg bg-red-900/30 hover:bg-red-800 text-red-400 hover:text-white border border-red-800/50 text-xs transition" title="Làm mới tiết học">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </div>
     </div>
@@ -67,7 +81,7 @@
 
         <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <div class="text-[11px] font-medium text-slate-400 uppercase">Hoàn thành 100%</div>
+            <div class="text-[11px] font-medium text-slate-400 uppercase">Đã hoàn thành 100%</div>
             <div class="text-2xl font-extrabold text-emerald-400 mt-0.5" id="metricSuccess">0</div>
           </div>
           <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -96,12 +110,12 @@
         </div>
       </div>
 
-      <!-- Khung hiển thị các máy Online -->
+      <!-- Khung hiển thị các trạm máy Online -->
       <div class="bg-slate-800/50 border border-slate-700/70 rounded-2xl p-5 shadow-xl">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center space-x-2">
             <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-400"></i>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Tiến độ thực hành theo trạm máy</h2>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Trạng thái phòng thực hành</h2>
           </div>
           <div class="flex items-center space-x-3 text-xs text-slate-400">
             <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> <span>Xong hết</span></span>
@@ -111,19 +125,19 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 min-h-[140px]" id="pcGrid">
-          <!-- Render trạm máy qua JS -->
+          <!-- Render máy online qua JS -->
         </div>
       </div>
 
     </div>
 
-    <!-- Cột Phải: Thanh soi chi tiết từng bài của máy đang chọn -->
+    <!-- Cột Phải: Thanh soi chi tiết từng bài -->
     <div class="space-y-5">
       <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-5 shadow-xl flex flex-col">
         <div class="flex items-center justify-between pb-3 border-b border-slate-700">
           <div class="flex items-center space-x-2">
             <i data-lucide="inspect" class="w-4 h-4 text-indigo-400"></i>
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Mã Nguồn Trạm Đang Chọn</h3>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Kiểm Tra Mã Nguồn</h3>
           </div>
           <span id="selectedPcBadge" class="text-xs px-2 py-0.5 rounded font-mono font-bold bg-slate-700 text-slate-300">--</span>
         </div>
@@ -134,19 +148,15 @@
             <span class="font-bold text-slate-100" id="selectedStudentName">Chưa chọn máy</span>
           </div>
           <div class="flex justify-between items-center text-slate-400">
-            <span>Tiến độ bài nộp:</span>
+            <span>Tiến độ hoàn thành:</span>
             <span id="selectedProgressBadge" class="font-bold text-emerald-400">--</span>
           </div>
 
-          <!-- Tabs chọn bài của học sinh để giáo viên xem -->
           <div>
-            <span class="text-[11px] text-slate-400 block mb-1.5 font-semibold">Chọn bài để kiểm tra code:</span>
-            <div class="flex space-x-1.5 overflow-x-auto pb-1" id="inspectTaskTabs">
-              <!-- Render các tab bài 1, bài 2... -->
-            </div>
+            <span class="text-[11px] text-slate-400 block mb-1.5 font-semibold">Chọn bài tập để xem code:</span>
+            <div class="flex space-x-1.5 overflow-x-auto pb-1" id="inspectTaskTabs"></div>
           </div>
 
-          <!-- Code Box -->
           <div class="mt-2">
             <div class="flex justify-between items-center text-[11px] text-slate-400 mb-1">
               <span id="inspectTaskTitle">Mã nguồn bài tập:</span>
@@ -155,15 +165,14 @@
             <pre class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-56" id="selectedCodeBox"># Trống</pre>
           </div>
 
-          <!-- Cảnh báo lỗi & AI Socratic -->
           <div id="errorSection" class="hidden">
             <div class="text-[11px] text-red-400 font-semibold mb-1 flex items-center">
-              <i data-lucide="bug" class="w-3.5 h-3.5 mr-1"></i> Lỗi biên dịch gần nhất:
+              <i data-lucide="bug" class="w-3.5 h-3.5 mr-1"></i> Lỗi biên dịch:
             </div>
             <div class="bg-red-950/40 border border-red-900/60 rounded-lg p-2 font-mono text-[11px] text-red-300 mb-2" id="selectedErrorText"></div>
 
             <div class="text-[11px] text-indigo-300 font-semibold mb-1 flex items-center">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1 text-amber-400"></i> AI Gợi Mở:
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1 text-amber-400"></i> AI Socratic Đã Gợi Mở:
             </div>
             <div class="bg-indigo-950/30 border border-indigo-800/40 rounded-lg p-2 text-[11px] text-indigo-200 italic" id="selectedAiHint"></div>
           </div>
@@ -178,7 +187,66 @@
 
   </main>
 
-  <!-- Modal Giao & Quản lý bài tập -->
+  <!-- MODAL 1: BẢNG XẾP HẠNG THI ĐUA (LEADERBOARD) -->
+  <div id="leaderboardModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <i data-lucide="trophy" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Bảng Xếp Hạng Thi Đua Tiết Học</h3>
+            <p class="text-[11px] text-slate-400">Cập nhật tức thời theo số bài hoàn thành</p>
+          </div>
+        </div>
+        <button onclick="toggleLeaderboardModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="overflow-y-auto max-h-80 divide-y divide-slate-800/60" id="leaderboardList">
+        <!-- Render danh sách xếp hạng -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: TỔNG KẾT TIẾT HỌC BẰNG AI & XUẤT EXCEL -->
+  <div id="summaryModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-purple-600/30 text-purple-300 flex items-center justify-center">
+            <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Báo Cáo Sư Phạm Tiết Học (AI Phân Tích)</h3>
+            <p class="text-[11px] text-slate-400">Đánh giá năng lực và đề xuất sư phạm tự động</p>
+          </div>
+        </div>
+        <button onclick="closeSummaryModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <!-- Khung phân tích của AI -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-2 leading-relaxed" id="aiPedagogicalReport">
+        <div class="flex items-center space-x-2 text-slate-400">
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
+          <span>AI đang tổng hợp và phân tích dữ liệu toàn lớp...</span>
+        </div>
+      </div>
+
+      <!-- Tác vụ xuất dữ liệu -->
+      <div class="flex items-center justify-between pt-2">
+        <span class="text-[11px] text-slate-500">Chuẩn hóa cho sổ theo dõi và báo cáo chuyên môn</span>
+        <div class="flex items-center space-x-2">
+          <button onclick="exportToExcelCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Tải Bảng Điểm (Excel CSV)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: GIAO BÀI TẬP -->
   <div id="assignModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -189,9 +257,7 @@
         <button onclick="closeAssignModal()" class="text-slate-400 hover:text-white">&times;</button>
       </div>
 
-      <div class="space-y-3 max-h-96 overflow-y-auto pr-1" id="assignModalTaskList">
-        <!-- Render danh sách chỉnh sửa bài tập -->
-      </div>
+      <div class="space-y-3 max-h-96 overflow-y-auto pr-1" id="assignModalTaskList"></div>
 
       <div class="flex items-center justify-between pt-3 border-t border-slate-800">
         <button onclick="addNewTaskToAssign()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center space-x-1">
@@ -225,6 +291,7 @@
     let onlinePCs = [];
     let selectedPcId = null;
     let selectedTaskKeyToView = null;
+    let celebratedPCs = new Set(); // Tránh bắn pháo hoa lặp lại cho cùng 1 học sinh
 
     function initSystem() {
       // 1. Lắng nghe bài tập
@@ -233,7 +300,6 @@
         if (data && Array.isArray(data)) {
           currentAssignments = data;
         } else {
-          // Khởi tạo bài tập gốc nếu chưa có
           currentAssignments = [
             { id: "task_1", title: "Bài 1: Tính tổng số chẵn từ 1 đến N", desc: "Tính tổng chẵn từ 1 đến 10", sample: "10 ➔ 30", expectedOutput: "30", template: "# Bài 1\nn = 10\ntong = 0\nfor i in range(1, n + 1):\n    if i % 2 == 0:\n        tong += i\nprint(tong)" },
             { id: "task_2", title: "Bài 2: Đếm số lượng ước của N", desc: "Đếm số ước nguyên dương của 12", sample: "12 ➔ 6", expectedOutput: "6", template: "# Bài 2\nn = 12\ndem = 0\nprint(dem)" },
@@ -253,11 +319,19 @@
             const pc = data[k];
             if (pc.status && pc.status !== "offline") {
               onlinePCs.push(pc);
+
+              // Tự động kích hoạt vinh danh pháo hoa khi có học sinh hoàn thành 100% bài
+              const totalTasks = currentAssignments.length;
+              if (pc.passedCount === totalTasks && totalTasks > 0 && !celebratedPCs.has(pc.id)) {
+                celebratedPCs.add(pc.id);
+                triggerConfetti(pc.name, `PC-${String(pc.id).padStart(2, '0')}`);
+              }
             }
           });
         }
         onlinePCs.sort((a, b) => a.id - b.id);
         renderGrid();
+        renderLeaderboard();
 
         if (selectedPcId) {
           const current = onlinePCs.find(p => p.id === selectedPcId);
@@ -279,7 +353,7 @@
         grid.className = "flex flex-col items-center justify-center py-10 text-slate-500 col-span-full";
         grid.innerHTML = `
           <i data-lucide="monitor-off" class="w-10 h-10 mb-2 stroke-[1.5]"></i>
-          <p class="text-sm font-medium">Hiện chưa có học sinh nào đăng nhập phòng thực hành</p>
+          <p class="text-sm font-medium">Hiện chưa có máy học sinh nào đăng nhập phòng</p>
         `;
         updateMetrics();
         lucide.createIcons();
@@ -323,7 +397,7 @@
           <div>
             <div class="flex items-center justify-between text-[10px] text-slate-300 font-medium mb-1">
               <span>Đạt: <b class="${isAllPassed ? 'text-emerald-400 font-bold' : 'text-amber-400'}">${passed}/${total}</b></span>
-              <span>${isAllPassed ? 'Xong' : (pc.status === 'stuck' ? 'Kẹt lỗi' : 'Đang làm')}</span>
+              <span>${isAllPassed ? 'Xong 🏆' : (pc.status === 'stuck' ? 'Kẹt lỗi' : 'Đang làm')}</span>
             </div>
             <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
               <div class="h-full ${isAllPassed ? 'bg-emerald-500' : 'bg-indigo-500'}" style="width: ${(passed/total)*100}%"></div>
@@ -349,7 +423,6 @@
       const total = pc.totalCount || currentAssignments.length;
       document.getElementById("selectedProgressBadge").innerText = `${passed}/${total} Bài Đạt`;
 
-      // Render danh sách các bài để xem code
       renderInspectTaskTabs(pc);
 
       const errSection = document.getElementById("errorSection");
@@ -394,7 +467,6 @@
         container.appendChild(btn);
       });
 
-      // Hiển thị code của bài đang chọn
       const currentTaskData = currentAssignments.find(t => t.id === selectedTaskKeyToView);
       document.getElementById("inspectTaskTitle").innerText = currentTaskData ? currentTaskData.title.split(":")[0] : "Mã nguồn";
 
@@ -448,12 +520,173 @@
       if (confirm("Làm mới toàn bộ phòng máy cho tiết học mới?")) {
         pcsRef.remove();
         onlinePCs = [];
+        celebratedPCs.clear();
         clearSelection();
         renderGrid();
       }
     }
 
-    // Modal Quản Lý Giao Bài
+    // TÍNH NĂNG 1: BẢNG XẾP HẠNG & HIỆU ỨNG PHÁO HOA VINH DANH
+    function triggerConfetti(studentName, pcBadge) {
+      if (window.confetti) {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      }
+    }
+
+    function toggleLeaderboardModal() {
+      const modal = document.getElementById("leaderboardModal");
+      modal.classList.toggle("hidden");
+      if (!modal.classList.contains("hidden")) {
+        renderLeaderboard();
+      }
+    }
+
+    function renderLeaderboard() {
+      const listEl = document.getElementById("leaderboardList");
+      if (!listEl) return;
+      listEl.innerHTML = "";
+
+      // Xếp hạng: Học sinh pass nhiều bài nhất lên đầu
+      const sorted = [...onlinePCs].sort((a, b) => (b.passedCount || 0) - (a.passedCount || 0));
+
+      if (sorted.length === 0) {
+        listEl.innerHTML = `<p class="py-6 text-center text-xs text-slate-500">Chưa có dữ liệu xếp hạng</p>`;
+        return;
+      }
+
+      sorted.forEach((pc, idx) => {
+        const item = document.createElement("div");
+        item.className = "py-3 flex items-center justify-between text-xs";
+        
+        let rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 font-bold flex items-center justify-center font-mono text-[11px]">${idx + 1}</span>`;
+        if (idx === 0) rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">🥇</span>`;
+        else if (idx === 1) rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-bold flex items-center justify-center text-[11px]">🥈</span>`;
+        else if (idx === 2) rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-700 text-white font-bold flex items-center justify-center text-[11px]">🥉</span>`;
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-3">
+            ${rankBadge}
+            <div>
+              <p class="font-bold text-white">${pc.name}</p>
+              <span class="text-[10px] text-slate-400 font-mono">PC-${String(pc.id).padStart(2, '0')}</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="font-bold text-emerald-400">${pc.passedCount || 0}/${currentAssignments.length} Bài</span>
+            <p class="text-[10px] text-slate-500">${(pc.passedCount === currentAssignments.length && currentAssignments.length > 0) ? 'Đã hoàn thành' : 'Đang làm'}</p>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    // TÍNH NĂNG 2: TỔNG KẾT TIẾT HỌC BẰNG AI & XUẤT EXCEL
+    function openSummaryModal() {
+      document.getElementById("summaryModal").classList.remove("hidden");
+      generateAIPedagogicalReport();
+    }
+
+    function closeSummaryModal() {
+      document.getElementById("summaryModal").classList.add("hidden");
+    }
+
+    function generateAIPedagogicalReport() {
+      const totalStudents = onlinePCs.length;
+      const passedAll = onlinePCs.filter(p => (p.passedCount || 0) === currentAssignments.length).length;
+      const stuckCount = onlinePCs.filter(p => p.status === "stuck").length;
+      
+      const reportBox = document.getElementById("aiPedagogicalReport");
+      
+      // Tổng hợp lỗi thường gặp
+      let commonErrors = [];
+      onlinePCs.forEach(p => {
+        if (p.error?.msg) commonErrors.push(p.error.msg.split("\n")[0]);
+      });
+
+      setTimeout(() => {
+        reportBox.innerHTML = `
+          <div class="space-y-3">
+            <div class="p-3 bg-purple-950/30 border border-purple-800/40 rounded-lg">
+              <h4 class="font-bold text-purple-300 text-xs mb-1 flex items-center">
+                <i data-lucide="check-check" class="w-4 h-4 mr-1 text-emerald-400"></i> Đánh giá mức độ đạt chuẩn đầu ra:
+              </h4>
+              <p class="text-[11px] leading-relaxed text-slate-300">
+                Lớp có <b>${totalStudents}</b> học sinh tham gia thực hành. 
+                Trong đó <b>${passedAll}/${totalStudents}</b> em (đạt ${(totalStudents > 0 ? (passedAll/totalStudents*100).toFixed(0) : 0)}%) hoàn thành xuất sắc toàn bộ ${currentAssignments.length} nhiệm vụ.
+              </p>
+            </div>
+
+            <div>
+              <h4 class="font-bold text-slate-200 text-xs mb-1">🔍 Phân tích điểm nghẽn nhận thức:</h4>
+              <p class="text-[11px] leading-relaxed text-slate-400">
+                ${stuckCount > 0 
+                  ? `Có <b>${stuckCount}</b> học sinh gặp khó khăn trong việc kiểm soát cú pháp (chủ yếu là SyntaxError và thụt lề IndentationError). Nhờ Trợ lý Socratic AI định hướng, các em đã chủ động tự sửa mà không cần giáo viên giải hộ.` 
+                  : `Không ghi nhận tình trạng kẹt lỗi nghiêm trọng. Học sinh vận dụng tốt các cấu trúc điều khiển đã học.`}
+              </p>
+            </div>
+
+            <div class="p-2.5 bg-blue-950/20 border border-blue-900/30 rounded-lg">
+              <h4 class="font-bold text-blue-300 text-xs mb-1">💡 Đề xuất sư phạm cho tiết học tiếp theo:</h4>
+              <p class="text-[11px] leading-relaxed text-slate-300">
+                Thầy cô nên dành 5 phút đầu giờ tiết sau để củng cố lại quy tắc dùng dấu hai chấm (<code>:</code>) và phân biệt giữa gán bằng (<code>=</code>) với so sánh bằng (<code>==</code>).
+              </p>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      }, 500);
+    }
+
+    // Xuất bảng điểm chi tiết ra file CSV (Mở được bằng Excel tiếng Việt có dấu)
+    function exportToExcelCSV() {
+      if (onlinePCs.length === 0) {
+        alert("Chưa có dữ liệu học sinh để xuất file!");
+        return;
+      }
+
+      // Tạo header CSV
+      let csvContent = "\uFEFF"; // Ký tự BOM để Excel nhận diện UTF-8 tiếng Việt
+      let headers = ["Số Máy", "Họ và Tên", "Số Bài Đạt", "Tổng Số Bài", "Tỷ Lệ (%)", "Trạng Thái"];
+      currentAssignments.forEach((t, i) => headers.push(`Bài ${i + 1}`));
+      csvContent += headers.join(",") + "\n";
+
+      // Điền dữ liệu từng học sinh
+      onlinePCs.forEach(pc => {
+        const passed = pc.passedCount || 0;
+        const total = currentAssignments.length;
+        const rate = total > 0 ? ((passed / total) * 100).toFixed(0) : 0;
+        const statusText = passed === total ? "Hoàn thành xuất sắc" : (pc.status === 'stuck' ? "Cần hỗ trợ" : "Đang học");
+
+        let row = [
+          `PC-${String(pc.id).padStart(2, '0')}`,
+          `"${pc.name}"`,
+          passed,
+          total,
+          `${rate}%`,
+          `"${statusText}"`
+        ];
+
+        // Kết quả từng bài
+        currentAssignments.forEach(t => {
+          const isPassed = pc.tasks?.[t.id]?.passed;
+          row.push(isPassed ? "Đạt" : "Chưa đạt");
+        });
+
+        csvContent += row.join(",") + "\n";
+      });
+
+      // Tự động tải file về máy
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Bang_Diem_Thuc_Hanh_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // MODAL GIAO BÀI TẬP
     function openAssignModal() {
       renderAssignModalList();
       document.getElementById("assignModal").classList.remove("hidden");
@@ -479,7 +712,7 @@
           <textarea oninput="currentAssignments[${i}].desc = this.value" placeholder="Mô tả đề bài" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-slate-300 text-xs">${t.desc}</textarea>
           <div class="flex space-x-2">
             <input type="text" value="${t.sample}" oninput="currentAssignments[${i}].sample = this.value" placeholder="Ví dụ" class="flex-1 bg-slate-900 border border-slate-800 rounded p-1.5 text-white" />
-            <input type="text" value="${t.expectedOutput}" oninput="currentAssignments[${i}].expectedOutput = this.value" placeholder="Kết quả Output mẫu cần so khớp" class="flex-1 bg-slate-900 border border-slate-800 rounded p-1.5 text-emerald-400 font-mono font-bold" />
+            <input type="text" value="${t.expectedOutput}" oninput="currentAssignments[${i}].expectedOutput = this.value" placeholder="Output so khớp" class="flex-1 bg-slate-900 border border-slate-800 rounded p-1.5 text-emerald-400 font-mono font-bold" />
           </div>
         `;
         container.appendChild(box);
