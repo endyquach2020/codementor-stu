@@ -3,273 +3,203 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CodeMentor-AI | Dashboard Giám Sát, Vinh Danh & Tổng Kết</title>
+  <title>CodeMentor-AI | Trạm Thực Hành Học Sinh</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Skulpt Python Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Canvas Confetti Library cho hiệu ứng pháo hoa vinh danh -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
-    @keyframes pulse-border {
-      0%, 100% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-      50% { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    html, body {
+      height: 100%;
+      overflow: hidden; /* Chặn toàn bộ cuộn của trang web */
     }
-    .animate-danger-pulse { animation: pulse-border 1.5s infinite; }
+    textarea.code-editor {
+      tab-size: 4; -moz-tab-size: 4;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col font-sans overflow-hidden">
 
-  <!-- Header -->
-  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/80 sticky top-0 z-30 px-6 py-3.5">
-    <div class="max-w-[1600px] mx-auto flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20">
-          <i data-lucide="terminal" class="w-5 h-5"></i>
+  <!-- Modal Đăng nhập Trạm máy -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
+      <div class="text-center">
+        <div class="w-12 h-12 bg-blue-600 rounded-xl mx-auto flex items-center justify-center text-white mb-2 shadow-lg shadow-blue-500/30">
+          <i data-lucide="laptop" class="w-6 h-6"></i>
         </div>
+        <h2 class="text-lg font-bold text-white">Điểm danh Trạm Thực Hành</h2>
+        <p class="text-xs text-slate-400 mt-1">Chọn số máy bạn đang ngồi và nhập họ tên để nhận nhiệm vụ</p>
+      </div>
+
+      <div class="space-y-3 text-xs">
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-base font-bold text-white tracking-wide">CodeMentor-AI | Cockpit Sư Phạm Số</h1>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">EDTECH 4.0</span>
-          </div>
-          <p class="text-xs text-slate-400">Giám sát • Bảng xếp hạng vinh danh • Đánh giá sư phạm AI</p>
+          <label class="block text-slate-300 font-semibold mb-1">Số máy (PC-01 đến PC-45):</label>
+          <select id="pcNumberSelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"></select>
         </div>
-      </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center space-x-2.5">
-        <button onclick="toggleLeaderboardModal()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center space-x-1.5 transition">
-          <i data-lucide="trophy" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Bảng xếp hạng thi đua</span>
-        </button>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Họ và tên học sinh:</label>
+          <input type="text" id="studentNameInput" placeholder="Ví dụ: Trần Minh Bảo" 
+                 class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+        </div>
 
-        <button onclick="openSummaryModal()" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-purple-600/30 transition">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
-          <span>Tổng kết tiết học (AI)</span>
-        </button>
-
-        <button onclick="openAssignModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition">
-          <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-          <span>Giao bài (<span id="btnTaskCount">3</span>)</span>
-        </button>
-
-        <button onclick="resetAllStations()" class="p-1.5 rounded-lg bg-red-900/30 hover:bg-red-800 text-red-400 hover:text-white border border-red-800/50 text-xs transition" title="Làm mới tiết học">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        <button onclick="confirmStudentLogin()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition shadow-lg shadow-blue-600/30">
+          Vào phòng học & Nhận bài
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Header chính trên cùng -->
+  <header class="bg-slate-900 border-b border-slate-800 px-5 h-14 flex items-center justify-between flex-shrink-0 z-30">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+        <i data-lucide="code" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-sm font-bold text-white leading-tight">CodeMentor-AI | Phòng Thực Hành Số</h1>
+          <span id="currentStationBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">PC-??</span>
+        </div>
+        <p class="text-[11px] text-slate-400">Học sinh: <span id="currentStudentName" class="text-slate-200 font-medium">Chưa đăng nhập</span></p>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <div class="text-xs px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg font-medium text-slate-300">
+        Tiến độ: <span id="studentProgressText" class="font-bold text-emerald-400">0/0 Đạt</span>
+      </div>
+      <input type="password" id="studentApiKey" placeholder="Gemini API Key (tùy chọn)..."
+             class="text-xs px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 w-44 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+      <button onclick="runAndGradeCode()" id="runBtn" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20 transition">
+        <i data-lucide="play" class="w-3.5 h-3.5"></i>
+        <span>Chạy & Chấm bài</span>
+      </button>
     </div>
   </header>
 
-  <!-- Main Grid -->
-  <main class="max-w-[1600px] w-full mx-auto px-6 py-5 flex-1 grid grid-cols-1 xl:grid-cols-4 gap-6">
+  <!-- Workspace Container: Khóa cứng chiều cao (h-[calc(100vh-3.5rem)]) -->
+  <main class="flex-1 p-3 grid grid-cols-1 lg:grid-cols-12 gap-3 max-w-[1800px] w-full mx-auto overflow-hidden min-h-0">
+    
+    <!-- CỘT 1: ĐỀ BÀI (3 cols) -->
+    <section class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-xl min-h-0">
+      <!-- Cố định Header đề bài -->
+      <div class="px-4 py-2.5 border-b border-slate-800 flex items-center space-x-2 text-indigo-400 flex-shrink-0 bg-slate-900/90">
+        <i data-lucide="list-checks" class="w-4 h-4"></i>
+        <h2 class="font-bold uppercase tracking-wider text-slate-200 text-xs">Nhiệm vụ tiết học</h2>
+      </div>
 
-    <!-- Cột Trái: Danh sách máy Online -->
-    <div class="xl:col-span-3 space-y-5">
-      
-      <!-- Metrics Bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <div class="text-[11px] font-medium text-slate-400 uppercase">Học sinh Online</div>
-            <div class="text-2xl font-extrabold text-blue-400 mt-0.5" id="metricOnline">0</div>
-          </div>
-          <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-            <i data-lucide="users" class="w-5 h-5"></i>
-          </div>
+      <!-- Danh sách tabs chọn bài -->
+      <div class="p-2 border-b border-slate-800/80 flex-shrink-0">
+        <div class="flex flex-col space-y-1" id="taskTabList"></div>
+      </div>
+
+      <!-- Nội dung chi tiết đề bài - Tự cuộn độc lập -->
+      <div class="flex-1 p-3 overflow-y-auto text-xs space-y-2.5 min-h-0 bg-slate-950/40">
+        <h3 class="font-bold text-white text-sm" id="taskTitle">Đang tải nhiệm vụ...</h3>
+        <p class="text-slate-400 leading-relaxed" id="taskDesc"></p>
+        <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+          <span class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Ví dụ minh họa:</span>
+          <div class="text-slate-300 font-mono text-[11px]" id="taskSample"></div>
         </div>
-
-        <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <div class="text-[11px] font-medium text-slate-400 uppercase">Đã hoàn thành 100%</div>
-            <div class="text-2xl font-extrabold text-emerald-400 mt-0.5" id="metricSuccess">0</div>
-          </div>
-          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-            <i data-lucide="award" class="w-5 h-5"></i>
-          </div>
-        </div>
-
-        <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <div class="text-[11px] font-medium text-slate-400 uppercase">Đang làm bài</div>
-            <div class="text-2xl font-extrabold text-amber-400 mt-0.5" id="metricCoding">0</div>
-          </div>
-          <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-            <i data-lucide="code-2" class="w-5 h-5"></i>
-          </div>
-        </div>
-
-        <div class="bg-slate-800/70 border border-red-500/40 rounded-xl p-3 flex items-center justify-between bg-red-950/10">
-          <div>
-            <div class="text-[11px] font-medium text-red-400 uppercase">Kẹt lỗi $\ge$ 3 lần</div>
-            <div class="text-2xl font-extrabold text-red-500 mt-0.5" id="metricStuck">0</div>
-          </div>
-          <div class="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center animate-bounce">
-            <i data-lucide="alert-octagon" class="w-5 h-5"></i>
-          </div>
+        <div class="bg-blue-950/20 border border-blue-900/30 rounded-lg p-2 text-[11px] text-blue-300 leading-relaxed">
+          <p class="font-semibold text-blue-200 mb-0.5 flex items-center">
+            <i data-lucide="shield-alert" class="w-3 h-3 mr-1 text-amber-400"></i> Quy chuẩn Socratic:
+          </p>
+          Thầy AI đồng hành gợi mở tư duy, không đưa mã nguồn giải hộ và chỉ hỗ trợ nội dung bài thực hành.
         </div>
       </div>
 
-      <!-- Khung hiển thị các trạm máy Online -->
-      <div class="bg-slate-800/50 border border-slate-700/70 rounded-2xl p-5 shadow-xl">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-400"></i>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Trạng thái phòng thực hành</h2>
-          </div>
-          <div class="flex items-center space-x-3 text-xs text-slate-400">
-            <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> <span>Xong hết</span></span>
-            <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-amber-500 inline-block"></span> <span>Đang làm</span></span>
-            <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-red-500 inline-block"></span> <span>Kẹt lỗi</span></span>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 min-h-[140px]" id="pcGrid">
-          <!-- Render máy online qua JS -->
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Cột Phải: Thanh soi chi tiết từng bài -->
-    <div class="space-y-5">
-      <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-5 shadow-xl flex flex-col">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-700">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="inspect" class="w-4 h-4 text-indigo-400"></i>
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Kiểm Tra Mã Nguồn</h3>
-          </div>
-          <span id="selectedPcBadge" class="text-xs px-2 py-0.5 rounded font-mono font-bold bg-slate-700 text-slate-300">--</span>
-        </div>
-
-        <div class="mt-3.5 space-y-3 flex-1 text-xs">
-          <div class="flex justify-between items-center text-slate-400">
-            <span>Học sinh:</span>
-            <span class="font-bold text-slate-100" id="selectedStudentName">Chưa chọn máy</span>
-          </div>
-          <div class="flex justify-between items-center text-slate-400">
-            <span>Tiến độ hoàn thành:</span>
-            <span id="selectedProgressBadge" class="font-bold text-emerald-400">--</span>
-          </div>
-
-          <div>
-            <span class="text-[11px] text-slate-400 block mb-1.5 font-semibold">Chọn bài tập để xem code:</span>
-            <div class="flex space-x-1.5 overflow-x-auto pb-1" id="inspectTaskTabs"></div>
-          </div>
-
-          <div class="mt-2">
-            <div class="flex justify-between items-center text-[11px] text-slate-400 mb-1">
-              <span id="inspectTaskTitle">Mã nguồn bài tập:</span>
-              <span id="inspectTaskStatus" class="font-bold text-amber-400">Chưa nộp</span>
-            </div>
-            <pre class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-56" id="selectedCodeBox"># Trống</pre>
-          </div>
-
-          <div id="errorSection" class="hidden">
-            <div class="text-[11px] text-red-400 font-semibold mb-1 flex items-center">
-              <i data-lucide="bug" class="w-3.5 h-3.5 mr-1"></i> Lỗi biên dịch:
-            </div>
-            <div class="bg-red-950/40 border border-red-900/60 rounded-lg p-2 font-mono text-[11px] text-red-300 mb-2" id="selectedErrorText"></div>
-
-            <div class="text-[11px] text-indigo-300 font-semibold mb-1 flex items-center">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1 text-amber-400"></i> AI Socratic Đã Gợi Mở:
-            </div>
-            <div class="bg-indigo-950/30 border border-indigo-800/40 rounded-lg p-2 text-[11px] text-indigo-200 italic" id="selectedAiHint"></div>
-          </div>
-        </div>
-
-        <button onclick="markAssisted()" class="mt-4 w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
-          <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-          <span>Xác nhận giáo viên đã hỗ trợ tại chỗ</span>
+      <!-- Nút đặt lại code cố định dưới đáy cột 1 -->
+      <div class="p-2 border-t border-slate-800 flex-shrink-0 bg-slate-900">
+        <button onclick="resetTaskCode()" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1 transition">
+          <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+          <span>Khôi phục code mẫu bài này</span>
         </button>
       </div>
-    </div>
+    </section>
 
-  </main>
+    <!-- CỘT 2: EDITOR & TERMINAL (5 cols) -->
+    <section class="lg:col-span-5 flex flex-col space-y-3 min-h-0 overflow-hidden">
+      <!-- Editor Box (Chiếm phần lớn chiều cao) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl flex-1 flex flex-col overflow-hidden shadow-xl min-h-0">
+        <!-- Cố định Header Editor -->
+        <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center justify-between flex-shrink-0">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="file-code-2" class="w-4 h-4 text-emerald-400"></i>
+            <span class="text-xs font-mono font-bold text-slate-300" id="currentFileName">task_1.py</span>
+          </div>
+          <span class="text-[11px] text-slate-500 font-mono">Python In-Browser</span>
+        </div>
+        <!-- Vùng nhập code tự cuộn -->
+        <div class="flex-1 p-2 bg-slate-950 flex flex-col min-h-0 overflow-hidden">
+          <textarea id="codeEditor" oninput="notifyTyping()" spellcheck="false" 
+                    class="code-editor w-full flex-1 p-2 bg-transparent text-emerald-400 text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"></textarea>
+        </div>
+      </div>
 
-  <!-- MODAL 1: BẢNG XẾP HẠNG THI ĐUA (LEADERBOARD) -->
-  <div id="leaderboardModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <!-- Terminal Output Cố định chiều cao 140px -->
+      <div class="h-36 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-xl flex-shrink-0">
+        <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-1.5 flex items-center justify-between flex-shrink-0">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Terminal & Kết quả Testcase</span>
+        </div>
+        <pre id="outputConsole" class="p-2.5 flex-1 bg-slate-950 text-slate-300 font-mono text-xs overflow-y-auto whitespace-pre-wrap leading-relaxed">Bấm "Chạy & Chấm bài" để kiểm tra kết quả...</pre>
+      </div>
+    </section>
+
+    <!-- CỘT 3: TRỢ LÝ SOCRATIC AI (4 cols) -->
+    <section class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-xl min-h-0">
+      <!-- Cố định Header Gia Sư AI -->
+      <div class="bg-indigo-950/40 border-b border-slate-800 p-3 flex items-center justify-between flex-shrink-0">
         <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
-            <i data-lucide="trophy" class="w-5 h-5"></i>
+          <div class="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/30">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Bảng Xếp Hạng Thi Đua Tiết Học</h3>
-            <p class="text-[11px] text-slate-400">Cập nhật tức thời theo số bài hoàn thành</p>
+            <h3 class="text-xs font-bold text-white">Gia Sư Gợi Mở (Socratic AI)</h3>
+            <p class="text-[10px] text-emerald-400">Đồng hành tư duy cùng học sinh</p>
           </div>
         </div>
-        <button onclick="toggleLeaderboardModal()" class="text-slate-400 hover:text-white">&times;</button>
       </div>
 
-      <div class="overflow-y-auto max-h-80 divide-y divide-slate-800/60" id="leaderboardList">
-        <!-- Render danh sách xếp hạng -->
+      <!-- Khung tin nhắn tự cuộn bên trong (flex-1 overflow-y-auto) -->
+      <div id="chatHistory" class="flex-1 p-3 overflow-y-auto space-y-2.5 bg-slate-950/50 text-xs min-h-0">
+        <div class="flex items-start space-x-2">
+          <div class="w-6 h-6 rounded-full bg-indigo-600/80 flex items-center justify-center text-white text-[10px] flex-shrink-0 mt-0.5">AI</div>
+          <div class="bg-slate-800/90 border border-slate-700/80 p-2.5 rounded-xl rounded-tl-none text-slate-300 leading-relaxed">
+            Chào em! Thầy AI đã sẵn sàng. Hãy bấm <b>"Chạy & Chấm bài"</b>. Khi vướng lỗi, thầy sẽ đặt câu hỏi gợi mở để em tự sửa!
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- MODAL 2: TỔNG KẾT TIẾT HỌC BẰNG AI & XUẤT EXCEL -->
-  <div id="summaryModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <!-- Nút gợi ý nhanh & Ô gõ tin nhắn cố định ở đáy -->
+      <div class="p-2.5 border-t border-slate-800 bg-slate-900 space-y-2 flex-shrink-0">
+        <div class="flex space-x-1.5 overflow-x-auto pb-1 text-[11px]">
+          <button onclick="askQuickPrompt('explain')" class="whitespace-nowrap px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md border border-slate-700">
+            💡 Giải thích lỗi?
+          </button>
+          <button onclick="askQuickPrompt('hint')" class="whitespace-nowrap px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md border border-slate-700">
+            ❓ Gợi ý bước tiếp?
+          </button>
+        </div>
         <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-lg bg-purple-600/30 text-purple-300 flex items-center justify-center">
-            <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-white">Báo Cáo Sư Phạm Tiết Học (AI Phân Tích)</h3>
-            <p class="text-[11px] text-slate-400">Đánh giá năng lực và đề xuất sư phạm tự động</p>
-          </div>
-        </div>
-        <button onclick="closeSummaryModal()" class="text-slate-400 hover:text-white">&times;</button>
-      </div>
-
-      <!-- Khung phân tích của AI -->
-      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-2 leading-relaxed" id="aiPedagogicalReport">
-        <div class="flex items-center space-x-2 text-slate-400">
-          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-purple-400"></i>
-          <span>AI đang tổng hợp và phân tích dữ liệu toàn lớp...</span>
-        </div>
-      </div>
-
-      <!-- Tác vụ xuất dữ liệu -->
-      <div class="flex items-center justify-between pt-2">
-        <span class="text-[11px] text-slate-500">Chuẩn hóa cho sổ theo dõi và báo cáo chuyên môn</span>
-        <div class="flex items-center space-x-2">
-          <button onclick="exportToExcelCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span>Tải Bảng Điểm (Excel CSV)</span>
+          <input type="text" id="studentChatInput" placeholder="Hỏi Trợ lý AI về bài này..."
+                 class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                 onkeydown="if(event.key === 'Enter') sendStudentChat()" />
+          <button onclick="sendStudentChat()" class="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition shadow-md shadow-indigo-600/20">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
           </button>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- MODAL 3: GIAO BÀI TẬP -->
-  <div id="assignModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center space-x-2">
-          <i data-lucide="book-plus" class="w-5 h-5 text-indigo-400"></i>
-          <h3 class="text-sm font-bold text-white">Quản lý & Giao bài tập cho tiết học</h3>
-        </div>
-        <button onclick="closeAssignModal()" class="text-slate-400 hover:text-white">&times;</button>
-      </div>
-
-      <div class="space-y-3 max-h-96 overflow-y-auto pr-1" id="assignModalTaskList"></div>
-
-      <div class="flex items-center justify-between pt-3 border-t border-slate-800">
-        <button onclick="addNewTaskToAssign()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center space-x-1">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>Thêm bài mới</span>
-        </button>
-        <button onclick="saveAssignmentsToFirebase()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow-md shadow-indigo-600/30">
-          Lưu & Phát tới tất cả học sinh
-        </button>
-      </div>
-    </div>
-  </div>
+  </main>
 
   <script>
     const firebaseConfig = {
@@ -284,470 +214,361 @@
     };
     firebase.initializeApp(firebaseConfig);
 
-    const pcsRef = firebase.database().ref("pcs");
-    const assignmentsRef = firebase.database().ref("assignments");
-
-    let currentAssignments = [];
-    let onlinePCs = [];
-    let selectedPcId = null;
-    let selectedTaskKeyToView = null;
-    let celebratedPCs = new Set(); // Tránh bắn pháo hoa lặp lại cho cùng 1 học sinh
-
-    function initSystem() {
-      // 1. Lắng nghe bài tập
-      assignmentsRef.on("value", snap => {
-        const data = snap.val();
-        if (data && Array.isArray(data)) {
-          currentAssignments = data;
-        } else {
-          currentAssignments = [
-            { id: "task_1", title: "Bài 1: Tính tổng số chẵn từ 1 đến N", desc: "Tính tổng chẵn từ 1 đến 10", sample: "10 ➔ 30", expectedOutput: "30", template: "# Bài 1\nn = 10\ntong = 0\nfor i in range(1, n + 1):\n    if i % 2 == 0:\n        tong += i\nprint(tong)" },
-            { id: "task_2", title: "Bài 2: Đếm số lượng ước của N", desc: "Đếm số ước nguyên dương của 12", sample: "12 ➔ 6", expectedOutput: "6", template: "# Bài 2\nn = 12\ndem = 0\nprint(dem)" },
-            { id: "task_3", title: "Bài 3: Tìm số lớn nhất trong mảng", desc: "Tìm max mảng [5, 18, 3, 42, 9, 21]", sample: "Max ➔ 42", expectedOutput: "42", template: "# Bài 3\nA = [5, 18, 3, 42, 9, 21]\n" }
-          ];
-          assignmentsRef.set(currentAssignments);
-        }
-        document.getElementById("btnTaskCount").innerText = currentAssignments.length;
-      });
-
-      // 2. Lắng nghe trạng thái học sinh Online
-      pcsRef.on("value", snapshot => {
-        const data = snapshot.val();
-        onlinePCs = [];
-        if (data) {
-          Object.keys(data).forEach(k => {
-            const pc = data[k];
-            if (pc.status && pc.status !== "offline") {
-              onlinePCs.push(pc);
-
-              // Tự động kích hoạt vinh danh pháo hoa khi có học sinh hoàn thành 100% bài
-              const totalTasks = currentAssignments.length;
-              if (pc.passedCount === totalTasks && totalTasks > 0 && !celebratedPCs.has(pc.id)) {
-                celebratedPCs.add(pc.id);
-                triggerConfetti(pc.name, `PC-${String(pc.id).padStart(2, '0')}`);
-              }
-            }
-          });
-        }
-        onlinePCs.sort((a, b) => a.id - b.id);
-        renderGrid();
-        renderLeaderboard();
-
-        if (selectedPcId) {
-          const current = onlinePCs.find(p => p.id === selectedPcId);
-          if (current) selectPC(current.id);
-          else clearSelection();
-        } else if (onlinePCs.length > 0) {
-          selectPC(onlinePCs[0].id);
-        } else {
-          clearSelection();
-        }
-      });
-    }
-
-    function renderGrid() {
-      const grid = document.getElementById("pcGrid");
-      grid.innerHTML = "";
-
-      if (onlinePCs.length === 0) {
-        grid.className = "flex flex-col items-center justify-center py-10 text-slate-500 col-span-full";
-        grid.innerHTML = `
-          <i data-lucide="monitor-off" class="w-10 h-10 mb-2 stroke-[1.5]"></i>
-          <p class="text-sm font-medium">Hiện chưa có máy học sinh nào đăng nhập phòng</p>
-        `;
-        updateMetrics();
-        lucide.createIcons();
-        return;
+    const defaultAssignments = [
+      {
+        id: "task_1",
+        title: "Bài 1: Tính tổng số chẵn từ 1 đến N",
+        desc: "Viết chương trình tính tổng tất cả các số nguyên chẵn trong phạm vi từ 1 đến N (với N = 10). In ra giá trị tổng.",
+        sample: "N = 10 ➔ Kết quả: 30",
+        expectedOutput: "30",
+        template: "# Bài 1: Tính tổng số chẵn từ 1 đến N\nn = 10\ntong = 0\nfor i in range(1, n + 1):\n    if i % 2 == 0:\n        tong += i\nprint(tong)"
+      },
+      {
+        id: "task_2",
+        title: "Bài 2: Đếm số lượng ước của N",
+        desc: "Viết chương trình đếm xem số nguyên N = 12 có bao nhiêu ước số nguyên dương. In ra số lượng ước.",
+        sample: "N = 12 (ước: 1, 2, 3, 4, 6, 12) ➔ Kết quả: 6",
+        expectedOutput: "6",
+        template: "# Bài 2: Đếm số ước của N\nn = 12\ndem = 0\n# Viết tiếp vòng lặp tại đây...\nprint(dem)"
+      },
+      {
+        id: "task_3",
+        title: "Bài 3: Tìm số lớn nhất trong mảng",
+        desc: "Cho mảng A = [5, 18, 3, 42, 9, 21]. Hãy viết chương trình tìm và in ra giá trị lớn nhất trong mảng A.",
+        sample: "A = [5, 18, 3, 42, 9, 21] ➔ Kết quả: 42",
+        expectedOutput: "42",
+        template: "# Bài 3: Tìm phần tử lớn nhất\nA = [5, 18, 3, 42, 9, 21]\n"
       }
+    ];
 
-      grid.className = "grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3";
-
-      onlinePCs.forEach(pc => {
-        const div = document.createElement("div");
-        div.onclick = () => selectPC(pc.id);
-
-        const passed = pc.passedCount || 0;
-        const total = pc.totalCount || currentAssignments.length || 3;
-        const isAllPassed = passed === total && total > 0;
-
-        let borderClass = "border-amber-500/60 bg-amber-950/20 hover:border-amber-400";
-        let statusDot = '<span class="w-2 h-2 rounded-full bg-amber-400"></span>';
-
-        if (pc.status === "stuck") {
-          borderClass = "border-red-500 bg-red-950/40 animate-danger-pulse";
-          statusDot = '<span class="w-2 h-2 rounded-full bg-red-500"></span>';
-        } else if (isAllPassed) {
-          borderClass = "border-emerald-500/60 bg-emerald-950/25 hover:border-emerald-400";
-          statusDot = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span>';
-        }
-
-        if (selectedPcId === pc.id) {
-          borderClass += " ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900";
-        }
-
-        div.className = `p-3 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between h-28 ${borderClass}`;
-        div.innerHTML = `
-          <div>
-            <div class="flex items-center justify-between">
-              <span class="font-mono font-bold text-xs ${pc.status === 'stuck' ? 'text-red-400 font-extrabold' : 'text-slate-200'}">PC-${String(pc.id).padStart(2, '0')}</span>
-              ${statusDot}
-            </div>
-            <div class="truncate text-xs font-bold text-white mt-1">${pc.name}</div>
-          </div>
-          <div>
-            <div class="flex items-center justify-between text-[10px] text-slate-300 font-medium mb-1">
-              <span>Đạt: <b class="${isAllPassed ? 'text-emerald-400 font-bold' : 'text-amber-400'}">${passed}/${total}</b></span>
-              <span>${isAllPassed ? 'Xong 🏆' : (pc.status === 'stuck' ? 'Kẹt lỗi' : 'Đang làm')}</span>
-            </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-              <div class="h-full ${isAllPassed ? 'bg-emerald-500' : 'bg-indigo-500'}" style="width: ${(passed/total)*100}%"></div>
-            </div>
-          </div>
-        `;
-        grid.appendChild(div);
-      });
-
-      updateMetrics();
-      lucide.createIcons();
-    }
-
-    function selectPC(id) {
-      selectedPcId = id;
-      const pc = onlinePCs.find(p => p.id === id);
-      if (!pc) return;
-
-      document.getElementById("selectedPcBadge").innerText = `PC-${String(pc.id).padStart(2, '0')}`;
-      document.getElementById("selectedStudentName").innerText = pc.name;
-
-      const passed = pc.passedCount || 0;
-      const total = pc.totalCount || currentAssignments.length;
-      document.getElementById("selectedProgressBadge").innerText = `${passed}/${total} Bài Đạt`;
-
-      renderInspectTaskTabs(pc);
-
-      const errSection = document.getElementById("errorSection");
-      if (pc.status === "stuck") {
-        errSection.classList.remove("hidden");
-        document.getElementById("selectedErrorText").innerText = pc.error ? pc.error.msg : "Lỗi biên dịch";
-        document.getElementById("selectedAiHint").innerText = `"${pc.aiHint || 'Rà soát lại cú pháp'}"`;
-      } else {
-        errSection.classList.add("hidden");
-      }
-
-      renderGrid();
-    }
-
-    function renderInspectTaskTabs(pc) {
-      const container = document.getElementById("inspectTaskTabs");
-      container.innerHTML = "";
-
-      const studentTasks = pc.tasks || {};
-      const taskKeys = currentAssignments.map(a => a.id);
-
-      if (!selectedTaskKeyToView || !taskKeys.includes(selectedTaskKeyToView)) {
-        selectedTaskKeyToView = taskKeys[0];
-      }
-
-      currentAssignments.forEach((task, idx) => {
-        const isPassed = studentTasks[task.id]?.passed;
-        const isSelected = task.id === selectedTaskKeyToView;
-
-        const btn = document.createElement("button");
-        btn.onclick = () => {
-          selectedTaskKeyToView = task.id;
-          renderInspectTaskTabs(pc);
-        };
-
-        btn.className = `px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap border transition ${
-          isSelected 
-            ? 'bg-indigo-600 text-white border-indigo-500' 
-            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
-        }`;
-        btn.innerHTML = `Bài ${idx + 1} ${isPassed ? '✓' : ''}`;
-        container.appendChild(btn);
-      });
-
-      const currentTaskData = currentAssignments.find(t => t.id === selectedTaskKeyToView);
-      document.getElementById("inspectTaskTitle").innerText = currentTaskData ? currentTaskData.title.split(":")[0] : "Mã nguồn";
-
-      const isCurPassed = studentTasks[selectedTaskKeyToView]?.passed;
-      const statusEl = document.getElementById("inspectTaskStatus");
-      if (isCurPassed) {
-        statusEl.className = "font-bold text-emerald-400";
-        statusEl.innerText = "Đã Pass 100%";
-      } else {
-        statusEl.className = "font-semibold text-amber-400";
-        statusEl.innerText = "Chưa hoàn thành";
-      }
-
-      document.getElementById("selectedCodeBox").innerText = 
-        studentTasks[selectedTaskKeyToView]?.code || "# Học sinh chưa viết code bài này";
-    }
-
-    function clearSelection() {
-      selectedPcId = null;
-      document.getElementById("selectedPcBadge").innerText = "--";
-      document.getElementById("selectedStudentName").innerText = "Chưa chọn máy";
-      document.getElementById("selectedProgressBadge").innerText = "--";
-      document.getElementById("selectedCodeBox").innerText = "# Trống";
-      document.getElementById("inspectTaskTabs").innerHTML = "";
-      document.getElementById("errorSection").classList.add("hidden");
-    }
-
-    function markAssisted() {
-      if (!selectedPcId) return;
-      firebase.database().ref(`pcs/pc_${selectedPcId}`).update({
-        status: "coding",
-        failCount: 0,
-        error: null
-      });
-    }
-
-    function updateMetrics() {
-      const online = onlinePCs.length;
-      const totalTasks = currentAssignments.length;
-      const success = onlinePCs.filter(p => (p.passedCount || 0) === totalTasks && totalTasks > 0).length;
-      const coding = onlinePCs.filter(p => (p.passedCount || 0) < totalTasks && p.status !== "stuck").length;
-      const stuck = onlinePCs.filter(p => p.status === "stuck").length;
-
-      document.getElementById("metricOnline").innerText = online;
-      document.getElementById("metricSuccess").innerText = success;
-      document.getElementById("metricCoding").innerText = coding;
-      document.getElementById("metricStuck").innerText = stuck;
-    }
-
-    function resetAllStations() {
-      if (confirm("Làm mới toàn bộ phòng máy cho tiết học mới?")) {
-        pcsRef.remove();
-        onlinePCs = [];
-        celebratedPCs.clear();
-        clearSelection();
-        renderGrid();
-      }
-    }
-
-    // TÍNH NĂNG 1: BẢNG XẾP HẠNG & HIỆU ỨNG PHÁO HOA VINH DANH
-    function triggerConfetti(studentName, pcBadge) {
-      if (window.confetti) {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      }
-    }
-
-    function toggleLeaderboardModal() {
-      const modal = document.getElementById("leaderboardModal");
-      modal.classList.toggle("hidden");
-      if (!modal.classList.contains("hidden")) {
-        renderLeaderboard();
-      }
-    }
-
-    function renderLeaderboard() {
-      const listEl = document.getElementById("leaderboardList");
-      if (!listEl) return;
-      listEl.innerHTML = "";
-
-      // Xếp hạng: Học sinh pass nhiều bài nhất lên đầu
-      const sorted = [...onlinePCs].sort((a, b) => (b.passedCount || 0) - (a.passedCount || 0));
-
-      if (sorted.length === 0) {
-        listEl.innerHTML = `<p class="py-6 text-center text-xs text-slate-500">Chưa có dữ liệu xếp hạng</p>`;
-        return;
-      }
-
-      sorted.forEach((pc, idx) => {
-        const item = document.createElement("div");
-        item.className = "py-3 flex items-center justify-between text-xs";
-        
-        let rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 font-bold flex items-center justify-center font-mono text-[11px]">${idx + 1}</span>`;
-        if (idx === 0) rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">🥇</span>`;
-        else if (idx === 1) rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-300 text-slate-950 font-bold flex items-center justify-center text-[11px]">🥈</span>`;
-        else if (idx === 2) rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-700 text-white font-bold flex items-center justify-center text-[11px]">🥉</span>`;
-
-        item.innerHTML = `
-          <div class="flex items-center space-x-3">
-            ${rankBadge}
-            <div>
-              <p class="font-bold text-white">${pc.name}</p>
-              <span class="text-[10px] text-slate-400 font-mono">PC-${String(pc.id).padStart(2, '0')}</span>
-            </div>
-          </div>
-          <div class="text-right">
-            <span class="font-bold text-emerald-400">${pc.passedCount || 0}/${currentAssignments.length} Bài</span>
-            <p class="text-[10px] text-slate-500">${(pc.passedCount === currentAssignments.length && currentAssignments.length > 0) ? 'Đã hoàn thành' : 'Đang làm'}</p>
-          </div>
-        `;
-        listEl.appendChild(item);
-      });
-    }
-
-    // TÍNH NĂNG 2: TỔNG KẾT TIẾT HỌC BẰNG AI & XUẤT EXCEL
-    function openSummaryModal() {
-      document.getElementById("summaryModal").classList.remove("hidden");
-      generateAIPedagogicalReport();
-    }
-
-    function closeSummaryModal() {
-      document.getElementById("summaryModal").classList.add("hidden");
-    }
-
-    function generateAIPedagogicalReport() {
-      const totalStudents = onlinePCs.length;
-      const passedAll = onlinePCs.filter(p => (p.passedCount || 0) === currentAssignments.length).length;
-      const stuckCount = onlinePCs.filter(p => p.status === "stuck").length;
-      
-      const reportBox = document.getElementById("aiPedagogicalReport");
-      
-      // Tổng hợp lỗi thường gặp
-      let commonErrors = [];
-      onlinePCs.forEach(p => {
-        if (p.error?.msg) commonErrors.push(p.error.msg.split("\n")[0]);
-      });
-
-      setTimeout(() => {
-        reportBox.innerHTML = `
-          <div class="space-y-3">
-            <div class="p-3 bg-purple-950/30 border border-purple-800/40 rounded-lg">
-              <h4 class="font-bold text-purple-300 text-xs mb-1 flex items-center">
-                <i data-lucide="check-check" class="w-4 h-4 mr-1 text-emerald-400"></i> Đánh giá mức độ đạt chuẩn đầu ra:
-              </h4>
-              <p class="text-[11px] leading-relaxed text-slate-300">
-                Lớp có <b>${totalStudents}</b> học sinh tham gia thực hành. 
-                Trong đó <b>${passedAll}/${totalStudents}</b> em (đạt ${(totalStudents > 0 ? (passedAll/totalStudents*100).toFixed(0) : 0)}%) hoàn thành xuất sắc toàn bộ ${currentAssignments.length} nhiệm vụ.
-              </p>
-            </div>
-
-            <div>
-              <h4 class="font-bold text-slate-200 text-xs mb-1">🔍 Phân tích điểm nghẽn nhận thức:</h4>
-              <p class="text-[11px] leading-relaxed text-slate-400">
-                ${stuckCount > 0 
-                  ? `Có <b>${stuckCount}</b> học sinh gặp khó khăn trong việc kiểm soát cú pháp (chủ yếu là SyntaxError và thụt lề IndentationError). Nhờ Trợ lý Socratic AI định hướng, các em đã chủ động tự sửa mà không cần giáo viên giải hộ.` 
-                  : `Không ghi nhận tình trạng kẹt lỗi nghiêm trọng. Học sinh vận dụng tốt các cấu trúc điều khiển đã học.`}
-              </p>
-            </div>
-
-            <div class="p-2.5 bg-blue-950/20 border border-blue-900/30 rounded-lg">
-              <h4 class="font-bold text-blue-300 text-xs mb-1">💡 Đề xuất sư phạm cho tiết học tiếp theo:</h4>
-              <p class="text-[11px] leading-relaxed text-slate-300">
-                Thầy cô nên dành 5 phút đầu giờ tiết sau để củng cố lại quy tắc dùng dấu hai chấm (<code>:</code>) và phân biệt giữa gán bằng (<code>=</code>) với so sánh bằng (<code>==</code>).
-              </p>
-            </div>
-          </div>
-        `;
-        lucide.createIcons();
-      }, 500);
-    }
-
-    // Xuất bảng điểm chi tiết ra file CSV (Mở được bằng Excel tiếng Việt có dấu)
-    function exportToExcelCSV() {
-      if (onlinePCs.length === 0) {
-        alert("Chưa có dữ liệu học sinh để xuất file!");
-        return;
-      }
-
-      // Tạo header CSV
-      let csvContent = "\uFEFF"; // Ký tự BOM để Excel nhận diện UTF-8 tiếng Việt
-      let headers = ["Số Máy", "Họ và Tên", "Số Bài Đạt", "Tổng Số Bài", "Tỷ Lệ (%)", "Trạng Thái"];
-      currentAssignments.forEach((t, i) => headers.push(`Bài ${i + 1}`));
-      csvContent += headers.join(",") + "\n";
-
-      // Điền dữ liệu từng học sinh
-      onlinePCs.forEach(pc => {
-        const passed = pc.passedCount || 0;
-        const total = currentAssignments.length;
-        const rate = total > 0 ? ((passed / total) * 100).toFixed(0) : 0;
-        const statusText = passed === total ? "Hoàn thành xuất sắc" : (pc.status === 'stuck' ? "Cần hỗ trợ" : "Đang học");
-
-        let row = [
-          `PC-${String(pc.id).padStart(2, '0')}`,
-          `"${pc.name}"`,
-          passed,
-          total,
-          `${rate}%`,
-          `"${statusText}"`
-        ];
-
-        // Kết quả từng bài
-        currentAssignments.forEach(t => {
-          const isPassed = pc.tasks?.[t.id]?.passed;
-          row.push(isPassed ? "Đạt" : "Chưa đạt");
-        });
-
-        csvContent += row.join(",") + "\n";
-      });
-
-      // Tự động tải file về máy
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Bang_Diem_Thuc_Hanh_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    // MODAL GIAO BÀI TẬP
-    function openAssignModal() {
-      renderAssignModalList();
-      document.getElementById("assignModal").classList.remove("hidden");
-    }
-
-    function closeAssignModal() {
-      document.getElementById("assignModal").classList.add("hidden");
-    }
-
-    function renderAssignModalList() {
-      const container = document.getElementById("assignModalTaskList");
-      container.innerHTML = "";
-
-      currentAssignments.forEach((t, i) => {
-        const box = document.createElement("div");
-        box.className = "p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs";
-        box.innerHTML = `
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-indigo-400">Nhiệm vụ #${i + 1} (${t.id})</span>
-            <button onclick="deleteTask(${i})" class="text-red-400 hover:text-red-300">Xóa</button>
-          </div>
-          <input type="text" value="${t.title}" oninput="currentAssignments[${i}].title = this.value" placeholder="Tên bài tập" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-white" />
-          <textarea oninput="currentAssignments[${i}].desc = this.value" placeholder="Mô tả đề bài" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-slate-300 text-xs">${t.desc}</textarea>
-          <div class="flex space-x-2">
-            <input type="text" value="${t.sample}" oninput="currentAssignments[${i}].sample = this.value" placeholder="Ví dụ" class="flex-1 bg-slate-900 border border-slate-800 rounded p-1.5 text-white" />
-            <input type="text" value="${t.expectedOutput}" oninput="currentAssignments[${i}].expectedOutput = this.value" placeholder="Output so khớp" class="flex-1 bg-slate-900 border border-slate-800 rounded p-1.5 text-emerald-400 font-mono font-bold" />
-          </div>
-        `;
-        container.appendChild(box);
-      });
-    }
-
-    function addNewTaskToAssign() {
-      const newId = `task_${currentAssignments.length + 1}`;
-      currentAssignments.push({
-        id: newId,
-        title: `Bài ${currentAssignments.length + 1}: Bài tập mới`,
-        desc: "Mô tả đề bài...",
-        sample: "Ví dụ: 1 ➔ 1",
-        expectedOutput: "1",
-        template: "# Viết code tại đây\n"
-      });
-      renderAssignModalList();
-    }
-
-    function deleteTask(index) {
-      currentAssignments.splice(index, 1);
-      renderAssignModalList();
-    }
-
-    function saveAssignmentsToFirebase() {
-      assignmentsRef.set(currentAssignments).then(() => {
-        alert("Đã lưu và cập nhật bộ bài tập mới tới tất cả học sinh!");
-        closeAssignModal();
-      });
-    }
+    let assignments = [...defaultAssignments];
+    let currentTaskIndex = 0;
+    let pcId = null;
+    let studentName = "";
+    let studentTasksState = {};
+    let dbRef = null;
 
     window.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
-      initSystem();
+      const select = document.getElementById("pcNumberSelect");
+      for (let i = 1; i <= 45; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.innerText = `PC-${String(i).padStart(2, '0')}`;
+        select.appendChild(opt);
+      }
+      setupTabIndentation();
+      listenAssignments();
     });
+
+    function setupTabIndentation() {
+      const editor = document.getElementById("codeEditor");
+      editor.addEventListener("keydown", function(e) {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          const start = this.selectionStart;
+          const end = this.selectionEnd;
+          this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 4;
+        }
+      });
+    }
+
+    function listenAssignments() {
+      firebase.database().ref("assignments").on("value", snapshot => {
+        const data = snapshot.val();
+        if (data && Array.isArray(data) && data.length > 0) {
+          assignments = data;
+        }
+        initTasksState();
+        renderTaskList();
+        loadTask(currentTaskIndex);
+      });
+    }
+
+    function initTasksState() {
+      assignments.forEach(task => {
+        if (!studentTasksState[task.id]) {
+          studentTasksState[task.id] = {
+            passed: false,
+            code: task.template,
+            failCount: 0,
+            lastError: null
+          };
+        }
+      });
+    }
+
+    function renderTaskList() {
+      const container = document.getElementById("taskTabList");
+      container.innerHTML = "";
+
+      assignments.forEach((task, idx) => {
+        const isSelected = idx === currentTaskIndex;
+        const isPassed = studentTasksState[task.id]?.passed;
+
+        const btn = document.createElement("button");
+        btn.onclick = () => switchTask(idx);
+        btn.className = `p-1.5 rounded-lg text-left flex items-center justify-between text-xs transition border ${
+          isSelected 
+            ? "bg-indigo-600/30 border-indigo-500 text-white font-bold" 
+            : "bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700"
+        }`;
+
+        btn.innerHTML = `
+          <div class="flex items-center space-x-2 truncate">
+            <span class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono ${
+              isPassed ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'
+            }">${idx + 1}</span>
+            <span class="truncate">${task.title.split(":")[0]}</span>
+          </div>
+          ${isPassed 
+            ? '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>' 
+            : '<span class="text-[9px] text-amber-400 flex-shrink-0">Chưa đạt</span>'}
+        `;
+        container.appendChild(btn);
+      });
+      lucide.createIcons();
+      updateProgressText();
+    }
+
+    function switchTask(idx) {
+      const currentTask = assignments[currentTaskIndex];
+      studentTasksState[currentTask.id].code = document.getElementById("codeEditor").value;
+
+      currentTaskIndex = idx;
+      renderTaskList();
+      loadTask(idx);
+    }
+
+    function loadTask(idx) {
+      const task = assignments[idx];
+      document.getElementById("taskTitle").innerText = task.title;
+      document.getElementById("taskDesc").innerText = task.desc;
+      document.getElementById("taskSample").innerText = task.sample;
+      document.getElementById("currentFileName").innerText = `${task.id}.py`;
+      document.getElementById("codeEditor").value = studentTasksState[task.id]?.code || task.template;
+    }
+
+    function resetTaskCode() {
+      const task = assignments[currentTaskIndex];
+      studentTasksState[task.id].code = task.template;
+      document.getElementById("codeEditor").value = task.template;
+      appendBotMessage(`Thầy đã khôi phục lại mã mẫu cho <b>${task.title.split(":")[0]}</b>.`);
+    }
+
+    function confirmStudentLogin() {
+      pcId = parseInt(document.getElementById("pcNumberSelect").value);
+      studentName = document.getElementById("studentNameInput").value.trim() || `Học sinh máy ${pcId}`;
+
+      document.getElementById("currentStationBadge").innerText = `PC-${String(pcId).padStart(2, '0')}`;
+      document.getElementById("currentStudentName").innerText = studentName;
+      document.getElementById("loginModal").classList.add("hidden");
+
+      dbRef = firebase.database().ref(`pcs/pc_${pcId}`);
+      syncToFirebase("coding");
+
+      dbRef.onDisconnect().update({ status: "offline" });
+      appendBotMessage(`Chào <b>${studentName}</b>! Em đã kết nối tại <b>PC-${String(pcId).padStart(2, '0')}</b>. Hãy hoàn thành các nhiệm vụ được giao nhé!`);
+    }
+
+    let typingTimer;
+    function notifyTyping() {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        const curId = assignments[currentTaskIndex].id;
+        studentTasksState[curId].code = document.getElementById("codeEditor").value;
+        syncToFirebase("coding");
+      }, 1000);
+    }
+
+    function runAndGradeCode() {
+      const curTask = assignments[currentTaskIndex];
+      const code = document.getElementById("codeEditor").value;
+      studentTasksState[curTask.id].code = code;
+
+      const consoleEl = document.getElementById("outputConsole");
+      consoleEl.innerText = `Đang chấm [${curTask.title.split(":")[0]}]...\n`;
+
+      let outputBuffer = "";
+
+      Sk.configure({
+        output: text => {
+          consoleEl.innerText += text;
+          outputBuffer += text;
+        },
+        read: x => {
+          if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined) throw "File not found: '" + x + "'";
+          return Sk.builtinFiles["files"][x];
+        }
+      });
+
+      Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true))
+        .then(() => {
+          const cleanOutput = outputBuffer.trim().replace(/\r/g, "");
+          const expected = curTask.expectedOutput.trim();
+
+          if (cleanOutput === expected || cleanOutput.endsWith(expected)) {
+            consoleEl.innerText += `\n\n[CHÍNH XÁC] Kết quả khớp hoàn toàn (${cleanOutput} == ${expected})!`;
+            studentTasksState[curTask.id].passed = true;
+            studentTasksState[curTask.id].failCount = 0;
+            studentTasksState[curTask.id].lastError = null;
+            renderTaskList();
+            syncToFirebase("coding");
+            appendBotMessage(`🎉 Chúc mừng em đã hoàn thành xuất sắc <b>${curTask.title.split(":")[0]}</b>! Hãy chuyển sang nhiệm vụ tiếp theo.`);
+          } else {
+            consoleEl.innerText += `\n\n[CHƯA ĐÚNG] Kết quả in ra: "${cleanOutput}" | Kỳ vọng: "${expected}"`;
+            studentTasksState[curTask.id].failCount += 1;
+            syncToFirebase("coding");
+            appendBotMessage(`Kết quả tính toán chưa đúng với yêu cầu bài toán. Em hãy đọc lại ví dụ và kiểm tra lại thuật toán nhé!`);
+          }
+        })
+        .catch(err => {
+          const errMsg = err.toString();
+          consoleEl.innerText += "\n[LỖI CÚ PHÁP]: " + errMsg;
+          studentTasksState[curTask.id].failCount += 1;
+
+          let aiHint = "Kiểm tra dấu hai chấm (:) ở cuối câu lệnh for/if.";
+          if (errMsg.includes("IndexError")) aiHint = "Chỉ số danh sách đang vượt quá giới hạn mảng.";
+          else if (errMsg.includes("IndentationError")) aiHint = "Thụt đầu dòng chưa đồng đều.";
+
+          studentTasksState[curTask.id].lastError = { msg: errMsg, hint: aiHint };
+          syncToFirebase(studentTasksState[curTask.id].failCount >= 3 ? "stuck" : "coding");
+          appendBotMessage(`⚠️ <b>Lỗi biên dịch:</b> ${errMsg}<br><br>💡 <i>Gợi mở Socratic: ${aiHint}</i>`);
+        });
+    }
+
+    function syncToFirebase(currentStatus) {
+      if (!dbRef) return;
+      const passedCount = Object.values(studentTasksState).filter(t => t.passed).length;
+      const totalCount = assignments.length;
+      const curTask = assignments[currentTaskIndex];
+
+      dbRef.set({
+        id: pcId,
+        name: studentName,
+        status: (passedCount === totalCount && totalCount > 0) ? "success" : currentStatus,
+        passedCount: passedCount,
+        totalCount: totalCount,
+        currentTaskId: curTask.id,
+        currentTaskTitle: curTask.title,
+        code: document.getElementById("codeEditor").value,
+        tasks: studentTasksState,
+        failCount: studentTasksState[curTask.id]?.failCount || 0,
+        error: studentTasksState[curTask.id]?.lastError || null,
+        aiHint: studentTasksState[curTask.id]?.lastError?.hint || null,
+        lastActive: Date.now()
+      });
+    }
+
+    function updateProgressText() {
+      const passed = Object.values(studentTasksState).filter(t => t.passed).length;
+      document.getElementById("studentProgressText").innerText = `${passed}/${assignments.length} Đạt`;
+    }
+
+    function sendStudentChat() {
+      const input = document.getElementById("studentChatInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendUserMessage(text);
+      input.value = "";
+
+      const lower = text.toLowerCase();
+      const currentTask = assignments[currentTaskIndex];
+
+      const offTopicKeywords = ["game", "chơi", "phim", "bài hát", "ca sĩ", "yêu", "thời tiết", "chuyện cười", "kể chuyện", "đố vui", "ăn gì", "ai là ai", "facebook", "tiktok", "youtube"];
+      if (offTopicKeywords.some(kw => lower.includes(kw))) {
+        setTimeout(() => {
+          appendBotMessage(`⚠️ <b>Nhắc nhở học tập:</b> Thầy AI chỉ hỗ trợ các thắc mắc liên quan trực tiếp đến bài thực hành lập trình Python hôm nay. Em hãy tập trung hoàn thành <b>${currentTask.title.split(":")[0]}</b> nhé!`);
+        }, 300);
+        return;
+      }
+
+      const askingSolutionKeywords = ["giải giùm", "giải hộ", "sửa giùm", "sửa hộ", "cho em code", "cho đáp án", "viết hộ", "làm hộ", "code mẫu hoàn chỉnh", "chép bài", "đáp án là gì"];
+      if (askingSolutionKeywords.some(kw => lower.includes(kw))) {
+        setTimeout(() => {
+          appendBotMessage(`🚫 <b>Thầy không thể đưa ra đáp án sẵn:</b> Mục tiêu của tiết học là rèn luyện tư duy thuật toán cho chính em! Hãy đọc kỹ gợi ý sau để tự làm:<br><br>💡 <i>Gợi ý: Em hãy kiểm tra xem biến đếm hoặc giá trị cần tích lũy của em đã được khởi tạo trước vòng lặp chưa?</i>`);
+        }, 300);
+        return;
+      }
+
+      const apiKey = document.getElementById("studentApiKey").value.trim();
+      if (apiKey) {
+        callGeminiSocratic(text, currentTask);
+      } else {
+        setTimeout(() => {
+          const taskState = studentTasksState[currentTask.id];
+          if (taskState?.lastError) {
+            appendBotMessage(`Về lỗi trong bài <b>${currentTask.title.split(":")[0]}</b>:<br>Lỗi này xuất hiện do cú pháp dòng lệnh chưa chuẩn. ❓ <i>Em hãy đối chiếu lại cấu trúc lệnh mẫu xem có bị thiếu dấu hai chấm (:) hoặc thụt lề sai không?</i>`);
+          } else {
+            appendBotMessage(`Thầy đã ghi nhận câu hỏi về <b>${currentTask.title.split(":")[0]}</b>. Em hãy bấm nút <b>"Chạy & Chấm bài"</b> trước để xem máy tính phản hồi kết quả ra sao nhé!`);
+          }
+        }, 400);
+      }
+    }
+
+    async function callGeminiSocratic(studentQuestion, currentTask) {
+      const apiKey = document.getElementById("studentApiKey").value.trim();
+      const code = document.getElementById("codeEditor").value;
+
+      const systemInstruction = `Bạn là Giáo viên Tin học THPT kiên nhẫn, chuẩn mực Socratic.
+BỐI CẢNH: Bài "${currentTask.title}", code: \`\`\`${code}\`\`\`. Câu hỏi học sinh: "${studentQuestion}".
+QUY TẮC: Tuyệt đối không đưa code giải hộ. Nếu hỏi ngoài lề hãy từ chối lịch sự. Chỉ giải thích bản chất và đặt 1 câu hỏi gợi mở để học sinh tự làm. Ngắn gọn dưới 3 câu.`;
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: systemInstruction }] }] })
+        });
+        const data = await response.json();
+        const reply = data.candidates[0].content.parts[0].text;
+        appendBotMessage(reply.replace(/\n/g, "<br>"));
+      } catch (err) {
+        appendBotMessage("Em hãy kiểm tra lại dòng lệnh vừa sửa và chạy thử lại nhé!");
+      }
+    }
+
+    function askQuickPrompt(type) {
+      const curTask = assignments[currentTaskIndex];
+      const err = studentTasksState[curTask.id]?.lastError;
+
+      if (type === 'explain') {
+        if (!err) {
+          appendUserMessage("Giải thích lỗi vừa gặp?");
+          setTimeout(() => appendBotMessage("Code hiện tại chưa ghi nhận lỗi. Em hãy bấm <b>'Chạy & Chấm bài'</b> nhé!"), 200);
+          return;
+        }
+        appendUserMessage("Giải thích lỗi vừa gặp?");
+        setTimeout(() => appendBotMessage(`Lỗi <code>${err.msg.split("\n")[0]}</code>: Máy tính không hiểu cú pháp này vì có thể em thiếu ký tự đóng khối (như <code>:</code>) hoặc thụt lề chưa đều.`), 200);
+      } else {
+        appendUserMessage("Gợi ý bước tiếp theo?");
+        setTimeout(() => appendBotMessage(`💡 <b>Gợi ý bước tiếp:</b> Hãy quan sát biến điều khiển vòng lặp. Mỗi lần lặp giá trị của nó thay đổi thế nào để chạm tới điều kiện dừng?`), 200);
+      }
+    }
+
+    function appendUserMessage(text) {
+      const chat = document.getElementById("chatHistory");
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "flex items-start justify-end space-x-2";
+      msgDiv.innerHTML = `<div class="bg-indigo-600 text-white p-2.5 rounded-xl rounded-tr-none text-xs leading-relaxed max-w-[85%]">${text}</div>`;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function appendBotMessage(html) {
+      const chat = document.getElementById("chatHistory");
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "flex items-start space-x-2";
+      msgDiv.innerHTML = `
+        <div class="w-6 h-6 rounded-full bg-indigo-600/80 flex items-center justify-center text-white text-[10px] flex-shrink-0 mt-0.5">AI</div>
+        <div class="bg-slate-800/90 border border-slate-700/80 p-2.5 rounded-xl rounded-tl-none text-slate-300 leading-relaxed max-w-[90%]">${html}</div>
+      `;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+      lucide.createIcons();
+    }
   </script>
 </body>
 </html>
